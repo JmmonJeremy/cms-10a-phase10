@@ -1,11 +1,11 @@
 <div class="panel panel-default">
   <div class="panel-heading clearfix">
     <div class=page-header style="border-bottom: none;">
-      <h3 class="panel-title" style="margin-left: .5rem; font-weight: bold; font-size: 2.5rem;">{{ contact.name }}</h3>
+      <h3 class="panel-title" style="margin-left: .5rem; font-weight: bold; font-size: 2.5rem;">{{ contact?.name }}</h3>
     </div>
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
       <span>
-        <img *ngIf="contact.imageUrl.trim() !== ''" 
+        <img *ngIf="contact?.imageUrl?.trim()" 
         src="{{ contact.imageUrl }}" alt="Picture of {{ contact.name }}" 
         class="img-responsive" style="max-height: 100px;">
       </span> 
@@ -19,18 +19,18 @@
   <div class="panel-body">    
     <div class="row">
       <div class="col-xs-12">
-        <div *ngIf="contact.email !== ' '">
-          <p><strong>Email:</strong> {{ contact.email }}</p>
-          <p><strong>Phone:</strong> {{ contact.phone }}</p>
+        <div *ngIf="contact?.email">
+          <p><strong>Email:</strong> {{ contact?.email }}</p>
+          <p><strong>Phone:</strong> {{ contact?.phone }}</p>
         </div>
         <p><strong>Contacts in Team:</strong></p>
-        <div *ngIf="contact.group && contact.group.length > 0">
+        <div *ngIf="contact?.group && contact.group.length > 0">
           <div *ngFor="let groupContact of contact.group" class="list-group-item clearfix" style="width: 260px; margin-left: 2rem;">
             <div class="pull-left">
               <h4 class="list-group-item-heading">{{ groupContact.name }}</h4>       
             </div>
             <span class="pull-right">
-              <img *ngIf="groupContact.imageUrl.trim() !== ''" 
+              <img *ngIf="groupContact.imageUrl?.trim()" 
               src="{{ groupContact.imageUrl }}" alt="Picture of {{ groupContact.name }}" 
               class="img-responsive" style="max-height: 50px;">
             </span>

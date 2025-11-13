@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { ActivatedRoute, Params, Router } from '@angular/router';
+import { DndDropEvent } from 'ngx-drag-drop';
+import { Subscription } from 'rxjs';
 
 import { Contact } from '../contact.model';
 import { ContactService } from '../contact.service';
-import { DndDropEvent } from 'ngx-drag-drop';
 
 @Component({
   selector: 'cms-contact-edit',
@@ -20,6 +21,8 @@ export class ContactEdit implements OnInit {
   groupContactRepeat = false;
   currentContact = false;
   id: string;
+  private subscription: Subscription;
+  private paramsSubscription: Subscription;  // NEW: Store inner sub
   // Added for adding contacts through a drop-down menu - addition
   availableContacts: Contact[] = [];
   selectedContactId: string = '';
@@ -30,29 +33,46 @@ export class ContactEdit implements OnInit {
     private route: ActivatedRoute) {}
 
   ngOnInit(): void {
-    // Added for adding contacts through a drop-down menu - addition
-    this.availableContacts = this.contactService.getContacts();
-    // Regular Assignment Code
-    this.route.params.subscribe (
-      (params: Params) => {
-        this.id = params['id'];
-        if (!this.id) {
-          this.editMode = false;          
-          return;
-        }  
-        this.originalContact = this.contactService.getContact(this.id);  
-        if (!this.originalContact) {          
-          return;
-        }          
-        this.editMode = true;
-        this.contact = JSON.parse(JSON.stringify(this.originalContact));         
-        if (this.originalContact.group && Array.isArray(this.originalContact.group)) {
-          this.groupContacts = JSON.parse(JSON.stringify(this.originalContact.group));
-        }
+    // 1. Wait for contact list to load
+    this.subscription = this.contactService.contactListChangedEvent.subscribe(
+      (contactList: Contact[]) => {
+        this.availableContacts = contactList;
+
+        // 2. NOW safe to read route params and set contact
+        this.paramsSubscription = this.route.params.subscribe((params: Params) => {
+          const id = params['id'];
+
+          if (!id) {
+            this.editMode = false;
+            this.contact = null;
+            this.groupContacts = [];
+            this.updateAvailableGroupContacts();
+            return;
+          }
+
+          // 3. Get contact from loaded list
+          this.originalContact = this.contactService.getContact(id);
+          if (!this.originalContact) {
+            this.router.navigate(['/contacts']);
+            return;
+          }
+
+          this.editMode = true;
+          this.contact = JSON.parse(JSON.stringify(this.originalContact));
+
+          // 4. NOW set groupContacts
+          this.groupContacts = this.originalContact.group
+            ? JSON.parse(JSON.stringify(this.originalContact.group))
+            : [];
+
+          // 5. NOW update dropdown
+          this.updateAvailableGroupContacts();
+        });
       }
-    ) 
-    // Added for adding contacts through a drop-down menu - addition
-    this.updateAvailableGroupContacts();
+    );
+
+    // 6. Trigger load  ***Added for adding contacts through a drop-down menu - addition
+    this.contactService.getContacts();
   }
 
   onSubmit(form: NgForm) {
@@ -102,12 +122,17 @@ export class ContactEdit implements OnInit {
   
   addToGroup(event:  DndDropEvent): void {
     const selectedContact: Contact = event.data;
-    const invalidGroupContact = this.isInvalidContact(selectedContact);
-    if (invalidGroupContact) {
+    // Prevent duplicates
+    if (this.groupContacts.some(c => c.id === selectedContact.id)) {
       return;
-    }   
+    }
+    // Prevent self
+    if (this.contact?.id === selectedContact.id) {
+      return;
+    }
     this.groupContacts.push(selectedContact);
-  }
+    this.updateAvailableGroupContacts(); // Refresh dropdown
+    }
 
   onRemoveItem(index: number): void {
     if (index < 0 || index >= this.groupContacts.length) {
@@ -116,17 +141,24 @@ export class ContactEdit implements OnInit {
     this.currentContact = false; 
     this.groupContactRepeat = false;   
     this.groupContacts.splice(index, 1);
+    this.updateAvailableGroupContacts();  // Refresh available dropdown list to include the removed contact
   }
 
-  // All below is added for adding contacts through a drop-down menu - addition
-  updateAvailableGroupContacts() {
+  // All below is added for adding contacts through a drop-down menu - addition *** except ngOnDestroy for unsubscribing
+  updateAvailableGroupContacts(): void {
     // get all contacts and the IDs of the current group members
-    const allContacts = this.contactService.getContacts();
-    // get the IDs of the current group members
-    const groupContactIds = this.groupContacts.map(c => c.id);
+    const allContacts = this.contactService.contacts.slice().sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+    const groupContactIds = this.groupContacts.map((c) => c.id);
+    // Get ID of the contact being edited (if any)
+    const currentContactId = this.contact?.id;
     // filter out contacts already in the group or the contact being edited
     this.availableContacts = allContacts.filter((contact) => {
-      return !groupContactIds.includes(contact.id) && contact.id !== this.contact.id;
+      return (
+        contact.id !== currentContactId &&           // Not the contact being edited
+        !groupContactIds.includes(contact.id)        // Not already in group
+      );
     });
   }
  
@@ -140,5 +172,10 @@ export class ContactEdit implements OnInit {
       this.selectedContactId = ''; // reset selection
       this.updateAvailableGroupContacts(); // update available list
     }
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+    this.paramsSubscription?.unsubscribe();  // NEW: Clean up inner sub
   }
 }

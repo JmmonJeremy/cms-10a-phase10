@@ -1,5 +1,8 @@
 import { NgModule, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { FormsModule } from '@angular/forms';
+import { DndModule } from 'ngx-drag-drop';
+import { provideHttpClient } from '@angular/common/http';
 
 import { App } from './app';
 import { Header } from './header';
@@ -18,8 +21,7 @@ import { DropdownDirective } from './shared/dropdown.directive';
 import { AppRoutingModule } from './app-routing.module';
 import { DocumentEdit } from './documents/document-edit/document-edit';
 import { ContactEdit } from './contacts/contact-edit/contact-edit';
-import { FormsModule } from '@angular/forms';
-import { DndModule } from 'ngx-drag-drop';
+import { ContactsFilterPipe } from './contacts/contacts-filter-pipe';
 
 @NgModule({
   declarations: [
@@ -38,7 +40,8 @@ import { DndModule } from 'ngx-drag-drop';
     MessageList,
     DropdownDirective,
     DocumentEdit,
-    ContactEdit,   
+    ContactEdit,
+    ContactsFilterPipe,   
   ],
   imports: [
     BrowserModule,
@@ -47,7 +50,8 @@ import { DndModule } from 'ngx-drag-drop';
     DndModule
   ],
   providers: [
-    provideBrowserGlobalErrorListeners()
+    provideBrowserGlobalErrorListeners(),
+    provideHttpClient()
   ],
   bootstrap: [App]
 })

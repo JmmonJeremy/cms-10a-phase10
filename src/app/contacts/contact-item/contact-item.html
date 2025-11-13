@@ -3,7 +3,7 @@
       <h4 class="list-group-item-heading">{{ contact.name }}</h4>       
     </div>
     <span class="pull-right">
-      <img *ngIf="contact.imageUrl.trim() !== ''" 
+      <img *ngIf="contact.imageUrl?.trim()" 
       src="{{ contact.imageUrl }}" alt="Picture of {{ contact.name }}" 
       class="img-responsive" style="max-height: 50px;">
     </span>  

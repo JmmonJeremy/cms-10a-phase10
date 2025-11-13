@@ -22,7 +22,7 @@ export class MessageEdit {
   onSendMessage(){    
     const msgSubject = this.subjectInputRef.nativeElement.value;
     const msgText = this.msgTextInputRef.nativeElement.value;
-    const message = new Message("1", msgSubject, msgText, this.currentSender);  
+    const message = new Message((this.messageService.getMaxId() + 1).toString(), msgSubject, msgText, this.currentSender);  
     this.messageService.addMessage(message);
     this.onClear();  
   }

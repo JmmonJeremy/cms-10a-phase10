@@ -1,4 +1,4 @@
-<div class="panel panel-default">
+<div class="panel panel-default" style="min-width: fit-content;">
   <div class="panel-heading">
     <div class="row pad-left-right">
       <span class="pull-left title" style="margin-left:1.75rem">Documents</span>
@@ -6,8 +6,9 @@
     </div>
   </div>
   <div class="panel-body">
-    <div class="center-panel">
+    <div class="center-panel" style="margin: 0 2.25rem;">
       <cms-document-item *ngFor="let document of documents" [document]="document"></cms-document-item>
     </div>
   </div>
 </div>
+

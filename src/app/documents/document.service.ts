@@ -1,5 +1,6 @@
 import { EventEmitter, Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { Document } from './document.model';
 import { MOCKDOCUMENTS } from './MOCKDOCUMENTS';
@@ -11,19 +12,57 @@ export class DocumentService {
   documentListChangedEvent = new Subject<Document[]>();
   documentChangedEvent = new EventEmitter<Document[]>();
   documentSelectedEvent = new EventEmitter<Document>();
-  documents: Document[];
+  documents: Document[] = [];
   documentsListClone: Document[];
-  maxDocumentId: number;
+  maxDocumentId: number;  
 
-  constructor() {
-    this.documents = MOCKDOCUMENTS;
-    this.maxDocumentId = this.getMaxId();
+  constructor(private http: HttpClient) {
+    // this.documents = MOCKDOCUMENTS;
+    this.maxDocumentId = this.getMaxId();    
   }
 
-  getDocuments(): Document[] {
-        return this.documents.slice();
-       }
+  getDocuments(): void {
+    this.http.get<Document[]>('https://learning-demo-ce50f-default-rtdb.firebaseio.com/documents.json').subscribe({
+      // Success callback
+      next: (documents: Document[]) => {        
+        this.documents = documents;
+        console.log('Documents loaded:', this.documents);
+        this.maxDocumentId = this.getMaxId();
+        this.documents.sort((a, b) => {
+          if (a.name < b.name) {
+            return -1;
+          }
+          if (a.name > b.name) {
+            return 1;
+          }
+          return 0;
+        });
+        this.documentListChangedEvent.next(this.documents.slice());
+      },
+      // Error callback
+      error: (error: any) => {
+        console.error('Error loading documents:', error);
+      }
+    });     
+  }
   
+  storeDocuments(): void {    
+    const data = JSON.stringify(this.documents);
+    const headers = new HttpHeaders({
+      'Content-Type': 'application/json'
+    });
+    this.http
+      .put('https://learning-demo-ce50f-default-rtdb.firebaseio.com/documents.json', data, { headers })
+      .subscribe({
+        next: () => {
+          this.documentListChangedEvent.next(this.documents.slice());
+        },
+        error: (err) => {
+          console.error('storeDocuments() failed:', err);
+        }
+      });
+  }
+
   getDocument(id: string): Document {     
     for (let document of this.documents) {
       if (document.id === id) {
@@ -52,7 +91,7 @@ export class DocumentService {
     newDocument.id = this.maxDocumentId.toString();
     this.documents.push(newDocument);
     this.documentsListClone = this.documents.slice();
-    this.documentListChangedEvent.next(this.documentsListClone);  
+    this.storeDocuments(); 
   }
 
   updateDocument(originalDocument: Document, newDocument: Document) {
@@ -66,7 +105,7 @@ export class DocumentService {
     newDocument.id = originalDocument.id;
     this.documents[pos] = newDocument;
     this.documentsListClone = this.documents.slice();
-    this.documentListChangedEvent.next(this.documentsListClone);
+    this.storeDocuments();
   }
 
   deleteDocument(document: Document) {
@@ -79,7 +118,7 @@ export class DocumentService {
     }
     this.documents.splice(pos, 1);
     this.documentsListClone = this.documents.slice()
-    this.documentListChangedEvent.next(this.documentsListClone);
+    this.storeDocuments();
   }
 
 }

@@ -16,10 +16,8 @@ function SequenceGenerator() {
     })
     .catch(function(err) {
       if (err) {
-        return res.status(500).json({
-          title: 'An error occurred',
-          error: err
-        });
+        console.error("SequenceGenerator initialization error:", err);
+        return;
       }      
     });
 }

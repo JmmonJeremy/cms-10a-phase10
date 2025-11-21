@@ -2,6 +2,7 @@ import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular
 
 import { Message } from '../message.model';
 import { MessageService } from '../message.service';
+import { Contact } from '../../contacts/contact.model';
 
 @Component({
   selector: 'cms-message-edit',
@@ -13,7 +14,8 @@ export class MessageEdit {
   @ViewChild('subject') subjectInputRef: ElementRef;
   @ViewChild('msgText') msgTextInputRef: ElementRef;
   @Output() addMessageEvent = new EventEmitter<Message>();
-  currentSender: string = "19";
+  currentSender: string = "691d884919d68d89fec73bfd";
+  // currentSender: Contact = new Contact('101', 'Jeremy Troy Suchanski', 'JeremySuchanski@hotmail.com', '503-989-4039', '../assets/images/suchanski.jpg',  null);
 
   constructor(private messageService: MessageService) {
 

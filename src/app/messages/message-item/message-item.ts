@@ -22,16 +22,17 @@ export class MessageItem implements OnInit, OnDestroy{
   }
 
   ngOnInit(): void {
-    // try to get te contact immediately
-    const contact: Contact = this.contactService.getContact(this.message.sender);
+    // try to get the contact immediately
+    const contact: Contact = this.contactService.getContactByMongoId(this.message.sender);
     if (contact) {
-      this.messageSender = contact.name;
+      this.messageSender = contact.name;      
     } else {
       // if contact not found, wait for contacts to load
       this.contactListSubscription = this.contactService.contactListChangedEvent
       .pipe(take(1))
       .subscribe((contacts: Contact[]) => {
-        const loadedContact = contacts.find(c => c.id === this.message.sender);
+        const loadedContact = contacts.find(c => c._id === this.message.sender);
+        console.log("messageSender: ", loadedContact);
         if (loadedContact) {
           this.messageSender = loadedContact.name;
         }

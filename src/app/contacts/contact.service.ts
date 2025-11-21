@@ -3,6 +3,7 @@ import { Subject } from 'rxjs';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 
 import { Contact } from './contact.model';
+import { environment } from '../../environments/environment';
 import {MOCKCONTACTS} from './MOCKCONTACTS';
 
 @Injectable({
@@ -21,38 +22,29 @@ export class ContactService {
     this.maxContactId = this.getMaxId();
   }
 
-getContacts(): void {
-  this.http.get<Contact[]>('https://learning-demo-ce50f-default-rtdb.firebaseio.com/contacts.json').subscribe({
-    // Success callback
-    next: (contacts: Contact[]) => {        
-      this.contacts = contacts;
-      console.log('Contacts loaded:', this.contacts);
-      this.maxContactId = this.getMaxId();
-      this.contacts.sort((a, b) => a.name.localeCompare(b.name));
-      this.contactListChangedEvent.next(this.contacts.slice());
-    },
-    // Error callback
-    error: (error: any) => {
-      console.error('Error loading contacts:', error);
-    }
-  });     
-}
+  private sortAndSend() {
+    this.contacts.sort((a, b) => a.name.localeCompare(b.name));
+    this.contactListChangedEvent.next(this.contacts.slice());
+  }
 
-storeContacts(): void {    
-  const data = JSON.stringify(this.contacts);
-  const headers = new HttpHeaders({
-    'Content-Type': 'application/json'
-  });
-  this.http
-    .put('https://learning-demo-ce50f-default-rtdb.firebaseio.com/contacts.json', data, { headers })
-    .subscribe({
-      next: () => {
-        this.contactListChangedEvent.next(this.contacts.slice());
+  getContactByMongoId(mongoId: string): Contact {
+    return this.contacts.find(c => c._id === mongoId);
+  }
+
+  getContacts(): void {
+    this.http.get<{ message: string, contacts: Contact[] }>(`${environment.apiUrl}/contacts`).subscribe({
+      // Success callback
+      next: (response) => {        
+        this.contacts = response.contacts;
+        console.log('Contacts loaded:', this.contacts);
+        this.maxContactId = this.getMaxId();
+        this.sortAndSend();
       },
-      error: (err) => {
-        console.error('storeContacts() failed:', err);
+      // Error callback
+      error: (error: any) => {
+        console.error('Error loading contacts:', error);
       }
-    });
+    });     
   }
 
   getContact(id: string): Contact {     
@@ -75,16 +67,25 @@ storeContacts(): void {
     return maxId;
   }
 
-  addContact(newContact: Contact){
-    if (!newContact){
+  addContact(contact: Contact) {
+    if (!contact) {
       return;
     }
-    this.maxContactId++;
-    newContact.id = this.maxContactId.toString();
-    this.contacts.push(newContact);
-    this.contactsListClone = this.contacts.slice();
-    this.storeContacts();
-  }  
+    // make sure id of the new Contact is empty
+    contact.id = '';
+    const headers = new HttpHeaders({'Content-Type': 'application/json'});
+    // add to database
+    this.http.post<{ message: string, contact: Contact }>(`${environment.apiUrl}/contacts`,
+      contact,
+      { headers: headers })
+      .subscribe(
+        (responseData) => {
+          // add new contact to contacts
+          this.contacts.push(responseData.contact);
+          this.sortAndSend();
+        }
+      );
+  }
 
   updateContact(originalContact: Contact, newContact: Contact) {
     if (!originalContact || !newContact) {
@@ -94,22 +95,36 @@ storeContacts(): void {
     if (pos < 0) {
       return;
     }
+    // set the id of the new Contact to the id of the old Contact
     newContact.id = originalContact.id;
-    this.contacts[pos] = newContact;
-    this.contactsListClone = this.contacts.slice();
-    this.storeContacts();
+    newContact._id = originalContact._id;
+    const headers = new HttpHeaders({'Content-Type': 'application/json'});
+    // update database
+    this.http.put(`${environment.apiUrl}/contacts/` + originalContact.id,
+      newContact, { headers: headers })
+      .subscribe(
+        (response: Response) => {
+          this.contacts[pos] = newContact;
+          this.sortAndSend();
+        }
+      );
   }
 
   deleteContact(contact: Contact) {
     if (!contact) {
         return;
     }
-    const pos = this.contacts.indexOf(contact);
+    const pos = this.contacts.findIndex(d => d.id === contact.id);
     if (pos < 0) {
         return;
     }
-    this.contacts.splice(pos, 1);
-    this.contactsListClone = this.contacts.slice()
-    this.storeContacts();
+    // delete from database
+    this.http.delete(`${environment.apiUrl}/contacts/` + contact.id)
+      .subscribe(
+        (response: Response) => {
+          this.contacts.splice(pos, 1);
+          this.sortAndSend();
+        }
+      );
   }
 }

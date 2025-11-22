@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Params, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 import { Document } from '../document.model';
 import { DocumentService } from '../document.service';
@@ -11,10 +12,12 @@ import { WindRefService } from '../../wind-ref.service';
   templateUrl: './document-detail.html',
   styleUrl: './document-detail.css'
 })
-export class DocumentDetail implements OnInit {
+export class DocumentDetail implements OnInit, OnDestroy {
   document: Document;
   id: string;
   nativeWindow: any;
+  private paramsSubscription: Subscription;  // Store outer sub
+  private documentListSubscription: Subscription;  // Store inner sub
 
   constructor(private documentService: DocumentService,
               private windRefService: WindRefService,              
@@ -24,11 +27,21 @@ export class DocumentDetail implements OnInit {
   }
 
   ngOnInit(): void {
-    this.route.params
+    this.paramsSubscription = this.route.params
       .subscribe(
         (params: Params) => {
           this.id = params['id'];
-          this.document = this.documentService.getDocument(this.id);
+          // If documents are already loaded, get immediately
+          if (this.documentService.documents.length > 0) {
+            this.document = this.documentService.getDocument(this.id);
+          }else {
+              // Otherwise, wait until documents are loaded
+              this.documentListSubscription = this.documentService.documentListChangedEvent.subscribe(() => {
+                this.document = this.documentService.getDocument(this.id);
+              });
+              // Trigger a load for refresh cases (where documentListChangedEvent isn't fired)
+              this.documentService.getDocuments();
+            }
         }
       );
 
@@ -45,4 +58,9 @@ export class DocumentDetail implements OnInit {
     this.documentService.deleteDocument(this.document);
     this.router.navigate(['/documents']);
   }
+
+  ngOnDestroy(): void {  // Add this method
+    this.paramsSubscription?.unsubscribe();  // Clean up outer
+    this.documentListSubscription?.unsubscribe();  // Clean up inner (if created)
+  }  
 }

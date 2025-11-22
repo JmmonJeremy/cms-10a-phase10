@@ -27,7 +27,7 @@ export class DocumentService {
     this.documentListChangedEvent.next(this.documents.slice());
   }
 
-  getDocuments(): void {
+  getDocuments(): void { 
     this.http.get<{ message: string, documents: Document[] }>(`${environment.apiUrl}/documents`).subscribe({
       // Success callback
       next: (response) => {        
